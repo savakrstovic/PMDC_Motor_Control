@@ -1,0 +1,60 @@
+# --- Build outputs ---
+*.o
+*.d
+*.su
+*.a
+*.elf
+*.bin
+*.hex
+*.map
+*.list
+*.lst
+*.out
+*.sim
+
+# STM32CubeIDE build directories
+/Debug/
+/Release/
+# STM32CubeIDE/.metadata/
+RemoteSystemsTempFiles/
+
+# EWARM (IAR) build/settings
+EWARM/**/Exe/
+EWARM/**/Obj/
+EWARM/**/List/
+EWARM/**/BrowseInfo/
+EWARM/settings/
+*.dep
+*.ewt
+*.pbd
+*.pbi
+*.cspy.bat
+
+# MDK-ARM (Keil) build/settings
+MDK-ARM/**/Objects/
+MDK-ARM/**/Listings/
+MDK-ARM/**/DebugConfig/
+MDK-ARM/**/RTE/
+*.uvguix.*
+*.uvgui.*
+*.scvd
+*.crf
+*.axf
+*.htm
+*.lnp
+*.iex
+*.tra
+*.bak
+*.dbgconf
+
+# STM32CubeMX backups
+*.ioc.bak
+.mxproject.bak
+
+# --- Editors / OS ---
+.vscode/
+*.swp
+*~
+Thumbs.db
+.DS_Store
+/.metadata/
