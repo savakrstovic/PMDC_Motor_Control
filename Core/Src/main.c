@@ -26,6 +26,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "speed_control.h"
+#include "motor_cli.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -95,6 +96,7 @@ int main(void)
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   SpeedControl_Init();
+  MotorCli_Init();
   HAL_TIM_Base_Start_IT(&htim6);
   /* USER CODE END 2 */
 
@@ -105,6 +107,10 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+    /* Background work only. The control loop runs from the TIM6 ISR and
+     * preempts everything here, so nothing in this loop can delay it. */
+    MotorCli_Task();
   }
   /* USER CODE END 3 */
 }

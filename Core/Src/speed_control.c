@@ -1,4 +1,6 @@
 #include <stdbool.h>
+#include <stddef.h>
+#include "main.h"
 #include "speed_control.h"
 #include "motor_driver.h"
 #include "tach_sensor.h"
@@ -14,10 +16,18 @@
 static float s_setpoint_rpm = 0.0f;
 static float s_integrator = 0.0f;
 
+/* Published for telemetry consumers (the CLI). Written only by
+ * SpeedControl_Task in the TIM6 ISR, read only under the critical section in
+ * SpeedControl_GetTelemetry. */
+static float   s_measured_rpm = 0.0f;
+static int16_t s_output_duty = 0;
+
 void SpeedControl_Init(void)
 {
   s_setpoint_rpm = 0.0f;
   s_integrator = 0.0f;
+  s_measured_rpm = 0.0f;
+  s_output_duty = 0;
   MotorDriver_Init();
 }
 
@@ -26,15 +36,37 @@ void SpeedControl_SetSetpointRpm(float rpm)
   s_setpoint_rpm = rpm;
 }
 
-void SpeedControl_Task(void)
+void SpeedControl_GetTelemetry(SpeedControl_Telemetry *telemetry)
 {
-  if (MotorDriver_IsFaulted())
+  if (telemetry == NULL)
   {
-    s_integrator = 0.0f;
     return;
   }
 
+  /* The three fields must describe the same tick, so they are copied with
+   * the tick locked out. Costs well under a microsecond of added jitter. */
+  uint32_t primask = __get_PRIMASK();
+  __disable_irq();
+  telemetry->setpoint_rpm = s_setpoint_rpm;
+  telemetry->measured_rpm = s_measured_rpm;
+  telemetry->output_duty_permille = s_output_duty;
+  __set_PRIMASK(primask);
+}
+
+void SpeedControl_Task(void)
+{
+  /* Sampled before the fault check so telemetry keeps showing the real
+   * coast-down speed while the bridge is latched off. */
   float measured_rpm = TachSensor_ReadRpm();
+
+  if (MotorDriver_IsFaulted())
+  {
+    s_integrator = 0.0f;
+    s_measured_rpm = measured_rpm;
+    s_output_duty = 0;
+    return;
+  }
+
   float error = s_setpoint_rpm - measured_rpm;
 
   float p_term = SPEED_KP * error;
@@ -66,4 +98,7 @@ void SpeedControl_Task(void)
   }
 
   MotorDriver_SetDuty((int16_t)output);
+
+  s_measured_rpm = measured_rpm;
+  s_output_duty = (int16_t)output;
 }
