@@ -22,8 +22,9 @@
 #include "stm32g4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "tim.h"
 #include "speed_control.h"
+#include "tach_sensor.h"
+#include "motor_cli.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,7 +58,8 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-extern TIM_HandleTypeDef htim6;
+extern ADC_HandleTypeDef hadc1;
+extern UART_HandleTypeDef hlpuart1;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -201,25 +203,50 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles TIM6 global interrupt, DAC1 and DAC3 channel underrun error interrupts.
+  * @brief This function handles ADC1 and ADC2 global interrupt.
   */
-void TIM6_DAC_IRQHandler(void)
+void ADC1_2_IRQHandler(void)
 {
-  /* USER CODE BEGIN TIM6_DAC_IRQn 0 */
+  /* USER CODE BEGIN ADC1_2_IRQn 0 */
 
-  /* USER CODE END TIM6_DAC_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim6);
-  /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
+  /* USER CODE END ADC1_2_IRQn 0 */
+  HAL_ADC_IRQHandler(&hadc1);
+  /* USER CODE BEGIN ADC1_2_IRQn 1 */
 
-  /* USER CODE END TIM6_DAC_IRQn 1 */
+  /* USER CODE END ADC1_2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles LPUART1 global interrupt.
+  */
+void LPUART1_IRQHandler(void)
+{
+  /* USER CODE BEGIN LPUART1_IRQn 0 */
+
+  /* The CLI drives LPUART1's registers itself -- see motor_cli.c for why the
+   * HAL transfer state machine is not used here. This consumes RXNE/TXE and
+   * clears the error flags, so the HAL_UART_IRQHandler call below finds
+   * nothing left to do; it is kept only so this file stays byte-identical to
+   * what CubeMX regenerates. */
+  MotorCli_IrqHandler();
+
+  /* USER CODE END LPUART1_IRQn 0 */
+  HAL_UART_IRQHandler(&hlpuart1);
+  /* USER CODE BEGIN LPUART1_IRQn 1 */
+
+  /* USER CODE END LPUART1_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+/* 1kHz control tick. TIM6's update event drives TRGO, TRGO starts the ADC
+ * conversion in hardware, and this fires ~0.4us later with the sample ready.
+ * Nothing in this path polls or waits, so the tick is hard-bounded. */
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
-  if (htim->Instance == TIM6)
+  if (hadc->Instance == ADC1)
   {
+    TachSensor_OnConversionComplete();
     SpeedControl_Task();
   }
 }

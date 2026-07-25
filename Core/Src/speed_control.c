@@ -8,6 +8,11 @@
 /* 1kHz sample rate. Placeholder gains for ~50-100Hz closed-loop bandwidth
  * per CLAUDE.md -- retune Kp/Ki against the actual motor/load on hardware. */
 #define CONTROL_PERIOD_S 0.001f
+/* How often the thread-level stall check runs, and how many ticks may be
+ * missed before the bridge is stopped. 50ms is ~50 ticks -- long enough that
+ * it never trips on jitter, short enough to matter mechanically. */
+#define WATCHDOG_PERIOD_MS   50U
+#define WATCHDOG_MIN_TICKS   1U
 #define SPEED_KP         2.0f
 #define SPEED_KI         40.0f
 #define OUTPUT_MIN       (-(float)MOTOR_DUTY_MAX)
@@ -22,12 +27,18 @@ static float s_integrator = 0.0f;
 static float   s_measured_rpm = 0.0f;
 static int16_t s_output_duty = 0;
 
+/* Incremented every tick; the watchdog watches it advance. */
+static volatile uint32_t s_tick_count = 0U;
+static volatile bool     s_loop_stalled = false;
+
 void SpeedControl_Init(void)
 {
   s_setpoint_rpm = 0.0f;
   s_integrator = 0.0f;
   s_measured_rpm = 0.0f;
   s_output_duty = 0;
+  s_tick_count = 0U;
+  s_loop_stalled = false;
   MotorDriver_Init();
 }
 
@@ -53,11 +64,53 @@ void SpeedControl_GetTelemetry(SpeedControl_Telemetry *telemetry)
   __set_PRIMASK(primask);
 }
 
+bool SpeedControl_IsLoopStalled(void)
+{
+  return s_loop_stalled;
+}
+
+void SpeedControl_WatchdogTask(void)
+{
+  static uint32_t last_check_ms = 0U;
+  static uint32_t last_tick_count = 0U;
+
+  uint32_t now_ms = HAL_GetTick();
+
+  if ((now_ms - last_check_ms) < WATCHDOG_PERIOD_MS)
+  {
+    return;
+  }
+  last_check_ms = now_ms;
+
+  uint32_t ticks = s_tick_count;
+
+  /* The loop is clocked by ADC end-of-conversion, so a sampling chain that
+   * dies silently would leave the bridge holding its last duty forever. This
+   * is the backstop for that -- it is not a replacement for the TIM1 break
+   * input, which is still what catches real hardware faults. */
+  if ((uint32_t)(ticks - last_tick_count) < WATCHDOG_MIN_TICKS)
+  {
+    if (!s_loop_stalled)
+    {
+      s_loop_stalled = true;
+      MotorDriver_Stop();
+    }
+  }
+  else
+  {
+    s_loop_stalled = false;
+  }
+
+  last_tick_count = ticks;
+}
+
 void SpeedControl_Task(void)
 {
+  s_tick_count++;
+
   /* Sampled before the fault check so telemetry keeps showing the real
    * coast-down speed while the bridge is latched off. */
-  float measured_rpm = TachSensor_ReadRpm();
+  float measured_rpm = TachSensor_LatestRpm();
 
   if (MotorDriver_IsFaulted())
   {

@@ -1,6 +1,7 @@
 #ifndef SPEED_CONTROL_H
 #define SPEED_CONTROL_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -22,8 +23,14 @@ void SpeedControl_SetSetpointRpm(float rpm);
  * section, so call it from thread mode -- not from the tick itself. */
 void SpeedControl_GetTelemetry(SpeedControl_Telemetry *telemetry);
 
-/* Runs one PI update; call from the TIM6 1kHz tick. */
+/* Runs one PI update. Called from the ADC end-of-conversion interrupt, which
+ * TIM6's TRGO paces at 1kHz -- the sample is already in hand, so this never
+ * waits on the ADC. */
 void SpeedControl_Task(void);
+
+/* Stops the bridge if the tick has stopped arriving. Thread mode, main loop. */
+void SpeedControl_WatchdogTask(void);
+bool SpeedControl_IsLoopStalled(void);
 
 #ifdef __cplusplus
 }

@@ -24,6 +24,10 @@ void MotorCli_Init(void);
  * never call from an ISR (it can reach HAL_Delay via MotorDriver_ClearFault). */
 void MotorCli_Task(void);
 
+/* Moves one byte between LPUART1 and the ring buffers. Call from
+ * LPUART1_IRQHandler only. */
+void MotorCli_IrqHandler(void);
+
 #ifdef __cplusplus
 }
 #endif

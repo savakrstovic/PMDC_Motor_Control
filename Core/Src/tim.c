@@ -128,7 +128,7 @@ void MX_TIM6_Init(void)
   {
     Error_Handler();
   }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
   {
@@ -136,8 +136,9 @@ void MX_TIM6_Init(void)
   }
   /* USER CODE BEGIN TIM6_Init 2 */
 
-  HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 1, 0);
-  HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
+  /* TIM6 is now a pure hardware pacer: its update event drives TRGO, which
+   * triggers ADC1 directly. The control loop runs from the ADC's
+   * end-of-conversion interrupt, so TIM6 needs no interrupt of its own. */
 
   /* USER CODE END TIM6_Init 2 */
 
@@ -182,10 +183,6 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
   /* USER CODE END TIM6_MspInit 0 */
     /* TIM6 clock enable */
     __HAL_RCC_TIM6_CLK_ENABLE();
-
-    /* TIM6 interrupt Init */
-    HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 1, 0);
-    HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
   /* USER CODE BEGIN TIM6_MspInit 1 */
 
   /* USER CODE END TIM6_MspInit 1 */
@@ -268,9 +265,6 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
   /* USER CODE END TIM6_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_TIM6_CLK_DISABLE();
-
-    /* TIM6 interrupt Deinit */
-    HAL_NVIC_DisableIRQ(TIM6_DAC_IRQn);
   /* USER CODE BEGIN TIM6_MspDeInit 1 */
 
   /* USER CODE END TIM6_MspDeInit 1 */
