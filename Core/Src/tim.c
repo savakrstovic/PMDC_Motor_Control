@@ -86,7 +86,7 @@ void MX_TIM1_Init(void)
   sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
   sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
   sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
-  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.DeadTime = 149;
   sBreakDeadTimeConfig.BreakState = TIM_BREAK_ENABLE;
   sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_LOW;
   sBreakDeadTimeConfig.BreakFilter = 0;
@@ -101,6 +101,26 @@ void MX_TIM1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* Dead time: DeadTime above is the raw DTG[7:0] field, which is piecewise,
+   * not linear (RM0440 28.4.18). With CKD=DIV1 and TIM1 on a 170MHz APB2
+   * timer clock, t_DTS = 5.882ns:
+   *
+   *   DTG[7:5]=0xx  ->  DTG[7:0] * t_DTS         max 127*5.88 = 747ns
+   *   DTG[7:5]=10x  ->  (64+DTG[5:0]) * 2*t_DTS  max 1494ns
+   *
+   * 1us is out of reach of the first range, so this uses the second:
+   *   (64 + 21) * 2 / 170MHz = 85 / 85MHz = 1.000us exactly
+   *   DTG = 0b10_010101 = 0x95 = 149
+   *
+   * The value is owned by CubeMX (TIM1 -> Parameter Settings -> Break And
+   * Dead Time management -> Dead Time), so it survives regeneration. This
+   * comment does not -- the .ioc is the source of truth.
+   *
+   * 1us is a starting point, not a verified number: size it from the FETs'
+   * measured turn-off vs turn-on delay plus gate-driver propagation skew,
+   * and confirm non-overlap on a scope at the gates before applying bus
+   * voltage. */
 
   /* USER CODE END TIM1_Init 2 */
   HAL_TIM_MspPostInit(&htim1);
