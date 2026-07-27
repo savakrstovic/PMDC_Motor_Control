@@ -18,7 +18,7 @@ TIM6 (1kHz, no IRQ) ──TRGO──▶ ADC1 conversion (hardware, no CPU)
 ```
 
 TIM6 is a pure hardware pacer now; its update interrupt is retired. The control loop
-runs from ADC end-of-conversion with the sample already in hand (~0.35 µs old), so
+runs from ADC end-of-conversion with the sample already in hand (~2.5 µs old), so
 there is no polling anywhere in the tick and it is hard-bounded.
 
 Interrupt priorities (NVIC_PRIORITYGROUP_4 → 4 preempt bits, 0 = most urgent):

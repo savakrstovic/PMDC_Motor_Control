@@ -240,7 +240,8 @@ void LPUART1_IRQHandler(void)
 /* USER CODE BEGIN 1 */
 
 /* 1kHz control tick. TIM6's update event drives TRGO, TRGO starts the ADC
- * conversion in hardware, and this fires ~0.4us later with the sample ready.
+ * conversion in hardware, and this fires ~2.5us later with the sample ready
+ * (92.5 + 12.5 cycles at 42.5MHz), which is 0.25% of the 1ms tick.
  * Nothing in this path polls or waits, so the tick is hard-bounded. */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
