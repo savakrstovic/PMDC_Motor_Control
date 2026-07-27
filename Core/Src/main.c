@@ -115,8 +115,8 @@ int main(void)
 
     /* Background work only. The control loop runs from the ADC ISR and
      * preempts everything here, so nothing in this loop can delay it. */
-    MotorCli_Task();
-    SpeedControl_WatchdogTask();
+    MotorCli_Task();				/* CLI RX/TX, command parsing, and telemetry streaming */
+    SpeedControl_WatchdogTask();	/* Watchdog for the control loop, which runs from ADC ISR */
   }
   /* USER CODE END 3 */
 }
