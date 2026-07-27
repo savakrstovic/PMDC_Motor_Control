@@ -175,20 +175,37 @@ Toolchain used: `arm-none-eabi-gcc` from `I:\ST\STM32CubeCLT_1.21.0`.
 
 ## Prompt to resume in a new session
 
-> I'm continuing work on the PMDC_Motor_Control firmware (STM32G474, closed-loop speed
-> control of an M4-4205D PMDC motor with tachogenerator feedback). Read `HANDOFF.md` in
-> the repo root first — it covers the architecture as built, the four commits already on
-> `main`, the CubeMX/.ioc gotchas, and the open items.
+**First make sure the session is actually pointed at this repo.** In Claude Desktop's
+Code tab the folder picker selects the project, not the prompt — start a session
+against the wrong directory and a prompt like "continue work on X" will be read as
+"create X". Clone the repo and open *that* folder before typing anything:
+
+```
+git clone https://github.com/savakrstovic/PMDC_Motor_Control.git
+```
+
+Then paste this. It verifies before it touches anything, so a wrong folder produces a
+question rather than a new project:
+
+> Before anything else: run `git log --oneline -3` and `ls` in the current working
+> directory. I expect the PMDC_Motor_Control repo, with `HANDOFF.md` in the root and
+> commit `41247a4` at or near HEAD.
 >
-> Key context: the 1 kHz control loop runs from the ADC end-of-conversion interrupt
-> paced by TIM6 TRGO (not from a timer ISR), there's a serial CLI on LPUART1 at 209700
-> baud, and TIM1 drives the bridge at 20 kHz with 1 µs dead time. It builds clean but
-> has **never been run on hardware**.
+> **If you don't see that, stop and tell me. Do not create, scaffold, or initialize
+> anything** — it means the session is pointed at the wrong folder and I'll fix that
+> before we start.
 >
-> Please don't compile unless I ask — I build from CubeIDE.
+> If it is there: read `HANDOFF.md`, then wait for instructions. Short version —
+> STM32G474 closed-loop PMDC speed control; the 1 kHz loop runs from the ADC
+> end-of-conversion interrupt paced by TIM6 TRGO; serial CLI on LPUART1 at 209700 baud;
+> TIM1 drives the bridge at 20 kHz with 1 µs dead time. It builds clean but has never
+> been run on hardware.
 >
-> [Then say what you want, e.g.:]
-> - "I've done the first bench test, here's what happened: ..."
-> - "Help me tune the PI gains — here's a step response I captured."
-> - "Fix open item #6, the stale comment in motor_cli.c."
-> - "Walk me through what to check on the scope before I apply bus voltage."
+> Don't compile unless I ask — I build from CubeIDE.
+
+Then say what you actually want, e.g.:
+
+- "I've done the first bench test, here's what happened: ..."
+- "Help me tune the PI gains — here's a step response I captured."
+- "Fix open item #6, the stale comment in motor_cli.c."
+- "Walk me through what to check on the scope before I apply bus voltage."
