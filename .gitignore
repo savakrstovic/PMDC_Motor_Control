@@ -17,7 +17,7 @@
 /Release/
 # STM32CubeIDE/.metadata/
 RemoteSystemsTempFiles/
-.settings
+/.settings/
 
 # EWARM (IAR) build/settings
 EWARM/**/Exe/
