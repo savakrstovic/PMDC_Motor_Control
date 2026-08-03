@@ -5,6 +5,12 @@ Written 2026-07-26. Covers the four commits `c1dfd7e..ee21431`, all merged to `m
 **Status: builds clean, never run on hardware.** Nothing in here has been tested on
 the physical bridge. Read "Open items" before powering anything.
 
+**See also [PROTECTION.md](PROTECTION.md)** — power-stage analysis: how a previous
+prototype destroyed a transistor and why this firmware would currently repeat it, the
+current-limited braking law that prevents it, the KLN-1001 board interface (what to
+wire and what needs level shifting), and the motor measurements still outstanding.
+Read that one before any bench work.
+
 ---
 
 ## Architecture as built
@@ -195,11 +201,12 @@ question rather than a new project:
 > anything** — it means the session is pointed at the wrong folder and I'll fix that
 > before we start.
 >
-> If it is there: read `HANDOFF.md`, then wait for instructions. Short version —
-> STM32G474 closed-loop PMDC speed control; the 1 kHz loop runs from the ADC
-> end-of-conversion interrupt paced by TIM6 TRGO; serial CLI on LPUART1 at 209700 baud;
-> TIM1 drives the bridge at 20 kHz with 1 µs dead time. It builds clean but has never
-> been run on hardware.
+> If it is there: read `HANDOFF.md` **and `PROTECTION.md`**, then wait for instructions.
+> Short version — STM32G474 closed-loop PMDC speed control; the 1 kHz loop runs from the
+> ADC end-of-conversion interrupt paced by TIM6 TRGO; serial CLI on LPUART1 at 209700
+> baud; TIM1 drives the bridge at 20 kHz with 1 µs dead time. It builds clean but has
+> never been run on hardware, and `PROTECTION.md` lists changes that must land before it
+> is safe to try.
 >
 > Don't compile unless I ask — I build from CubeIDE.
 
