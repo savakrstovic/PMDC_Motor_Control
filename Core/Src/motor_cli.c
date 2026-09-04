@@ -53,9 +53,10 @@
 #define STREAM_PERIOD_MIN_MS 50U
 #define STREAM_PERIOD_MAX_MS 10000U
 
-/* The tach's ±2048 codes at ~1.8 rpm/code cap what the loop can actually
- * measure; a setpoint past that could never be closed on. */
-#define SETPOINT_LIMIT_RPM 3600.0f
+/* The motor's rated maximum (Callan M4-4205D, 3200 rpm) -- the binding limit,
+ * and tighter than the tach's own ±2048-code range. A setpoint above it either
+ * cannot be reached or should not be. */
+#define SETPOINT_LIMIT_RPM 3200.0f
 
 /* Single-producer/single-consumer rings: for each pair, one index is written
  * only by the ISR and the other only by the task, so no locking is needed. */
@@ -342,7 +343,7 @@ static void CmdSet(const char *arg)
 
   if ((rpm > SETPOINT_LIMIT_RPM) || (rpm < -SETPOINT_LIMIT_RPM))
   {
-    CliPuts("err: setpoint beyond tach range (+/-3600 rpm)" CLI_EOL);
+    CliPuts("err: setpoint beyond motor rating (+/-3200 rpm)" CLI_EOL);
     return;
   }
 
@@ -369,9 +370,10 @@ static void CmdSet(const char *arg)
 
 static void CmdClear(void)
 {
-  /* Blocks the main loop for ~1-2ms on HAL_Delay inside the driver. The TIM6
-   * tick preempts thread mode, so the control loop keeps running throughout;
-   * characters typed meanwhile land in the RX ring and are parsed after. */
+  /* Blocks the main loop for ~1-2ms on HAL_Delay inside the driver. The ADC
+   * end-of-conversion tick preempts thread mode, so the control loop keeps
+   * running throughout; characters typed meanwhile land in the RX ring and
+   * are parsed after. */
   MotorDriver_ClearFault();
 
   if (MotorDriver_IsFaulted())

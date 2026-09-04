@@ -22,8 +22,8 @@ static float s_setpoint_rpm = 0.0f;
 static float s_integrator = 0.0f;
 
 /* Published for telemetry consumers (the CLI). Written only by
- * SpeedControl_Task in the TIM6 ISR, read only under the critical section in
- * SpeedControl_GetTelemetry. */
+ * SpeedControl_Task in the ADC end-of-conversion ISR, read only under the
+ * critical section in SpeedControl_GetTelemetry. */
 static float   s_measured_rpm = 0.0f;
 static int16_t s_output_duty = 0;
 

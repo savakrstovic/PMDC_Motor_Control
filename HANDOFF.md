@@ -156,10 +156,11 @@ chain stops the loop and the bridge would hold its last duty forever. It checks 
 shows `loop=STALLED`. It is *not* a substitute for the TIM1 break input. Delete the
 function and its one call site in `main.c` if unwanted.
 
-**6. Stale comments — two sites.** `motor_cli.c:372` says "the TIM6 tick preempts
+**6. Stale comments — two sites.** ~~`motor_cli.c:372` says "the TIM6 tick preempts
 thread mode" and `speed_control.c:25` says the telemetry statics are written "in the
-TIM6 ISR". Both moved to the ADC EOC ISR in `c1dfd7e`. Documentation only. (The
-reference at `motor_cli.c:19` is correct — TIM6 does still pace the ADC via TRGO.)
+TIM6 ISR".~~ **Resolved 2026-09-03** — both now say ADC end-of-conversion. (The
+reference at `motor_cli.c:19` is correct — TIM6 does still pace the ADC via TRGO —
+and must not be "fixed".)
 
 **7. `TIM1 LockLevel = OFF`.** TIM1's LOCK bits are write-once after reset and can make
 DTG/BKE/BKP/OSSR immutable for the power cycle — reasonable hardening for a value whose

@@ -218,7 +218,7 @@ Consequently `MotorDriver_ClearFault()` currently pulses PB1 into thin air and t
 | **Stall detection** | the mechanical hard-stop leaves the rotor stopped while the controller may still command voltage. Stall current is `V/Ra` regardless of how well the braking went. |
 | `TACH_RPM_PER_CODE` → `1.696f` | currently `1.8f` — reads 6.1% high, so the loop settles ~6% below every setpoint. Derived from 9.5 V/1000 rpm × 0.05 attenuation ÷ 0.8057 mV/code. |
 | `DeadTime` → `203` | 2.024 µs, matching the ~2 µs measured on this driver with a previous MCU. Current value 149 (1 µs) leaves only ~1.4x margin at Rg = 10 Ω. |
-| CLI setpoint limit → ±3200 | currently ±3600; motor max is 3200 rpm |
+| ~~CLI setpoint limit → ±3200~~ | **done 2026-09-03** — was ±3600; motor max is 3200 rpm |
 
 ### The `set 0` hazard
 
