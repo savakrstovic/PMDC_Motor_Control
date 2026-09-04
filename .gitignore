@@ -23,9 +23,9 @@ RemoteSystemsTempFiles/
 # regeneration does NOT restore are recorded in HANDOFF.md.
 # M4-4205D_Control.ioc and .mxproject stay tracked -- the first is the MCU
 # configuration itself, the second is what CubeMX needs to regenerate correctly.
-/.settings/
-/.cproject
-/.project
+#/.settings/
+#/.cproject
+#/.project
 
 # EWARM (IAR) build/settings
 EWARM/**/Exe/
