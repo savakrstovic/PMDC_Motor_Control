@@ -156,8 +156,10 @@ chain stops the loop and the bridge would hold its last duty forever. It checks 
 shows `loop=STALLED`. It is *not* a substitute for the TIM1 break input. Delete the
 function and its one call site in `main.c` if unwanted.
 
-**6. Stale comment.** `motor_cli.c:372` still says "the TIM6 tick preempts thread
-mode" — that moved to the ADC ISR in `c1dfd7e`. Documentation only.
+**6. Stale comments — two sites.** `motor_cli.c:372` says "the TIM6 tick preempts
+thread mode" and `speed_control.c:25` says the telemetry statics are written "in the
+TIM6 ISR". Both moved to the ADC EOC ISR in `c1dfd7e`. Documentation only. (The
+reference at `motor_cli.c:19` is correct — TIM6 does still pace the ADC via TRGO.)
 
 **7. `TIM1 LockLevel = OFF`.** TIM1's LOCK bits are write-once after reset and can make
 DTG/BKE/BKP/OSSR immutable for the power cycle — reasonable hardening for a value whose
@@ -170,7 +172,7 @@ bring-up.
 
 | Check | Result |
 |---|---|
-| Build, `-Wall -Wextra -O2` | clean, zero warnings |
+| Build, clean, zero warnings | see the flag note below |
 | Flash / RAM | 61,504 B of 512 K (11.7%) / 2,740 B of 128 K (2.1%) |
 | Vector table (decoded from ELF) | ADC1_2 → `ADC1_2_IRQHandler`, LPUART1 → `LPUART1_IRQHandler`, TIM6_DAC → `Default_Handler` (correctly retired) |
 | `HAL_TIM_PWM_MspInit` | strong symbol in project space — the Msp rename took |
@@ -178,6 +180,30 @@ bring-up.
 | Hardware | **none whatsoever** |
 
 Toolchain used: `arm-none-eabi-gcc` from `I:\ST\STM32CubeCLT_1.21.0`.
+
+**Flag note.** This table originally claimed `-Wall -Wextra -O2`. The tracked project
+specified neither: optimization was `-Os` in *both* configurations, and no `-Wextra`
+option was set anywhere (CubeIDE supplies `-Wall` by default, `-Wextra` it does not).
+So the zero-warning result was obtained under flags the repo did not capture. Treat
+"zero warnings" as unverified at `-Wextra` until someone rebuilds with it.
+
+## Build settings (`.cproject` is no longer tracked)
+
+Eclipse/CubeIDE metadata — `.cproject`, `.project`, `.settings/` — is per-machine and
+is now ignored. Opening `M4-4205D_Control.ioc` in STM32CubeIDE regenerates all three.
+`M4-4205D_Control.ioc` and `.mxproject` stay tracked: the first *is* the MCU
+configuration, and CubeMX needs the second to know what it previously generated.
+
+What regeneration does **not** restore — set these by hand after a fresh clone:
+
+| Setting | Debug | Release |
+|---|---|---|
+| Optimization | `-Os` | `-Os` |
+| Debug level | `-g3` | `-g0` |
+
+`-Os` on the Debug configuration is a deliberate departure from CubeIDE's default and
+is easy to lose silently. Optimization level changes code timing, so a loop tuned at
+one level is not guaranteed at another.
 
 ---
 
@@ -209,9 +235,10 @@ git clone https://github.com/savakrstovic/PMDC_Motor_Control.git
 Then paste this. It verifies before it touches anything, so a wrong folder produces a
 question rather than a new project:
 
-> Before anything else: run `git log --oneline -3` and `ls` in the current working
-> directory. I expect the PMDC_Motor_Control repo, with `HANDOFF.md` in the root and
-> commit `41247a4` at or near HEAD.
+> Before anything else: run `ls`, `git remote -v` and `git log --oneline -3` in the
+> current working directory. I expect the PMDC_Motor_Control repo — `HANDOFF.md` and
+> `PROTECTION.md` in the root, a `Core/` directory, and `origin` pointing at
+> `github.com/savakrstovic/PMDC_Motor_Control`.
 >
 > **If you don't see that, stop and tell me. Do not create, scaffold, or initialize
 > anything** — it means the session is pointed at the wrong folder and I'll fix that
