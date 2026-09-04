@@ -114,6 +114,18 @@ already assumed (at the old ARR a full-scale command produced only 13% duty).
 
 ---
 
+## Line endings
+
+The working tree is CRLF; the index stores LF; there is no `.gitattributes`. Git for
+Windows' default `core.autocrlf=true` makes this invisible on a Windows checkout, but
+any tool reading the folder with `autocrlf` unset — a Linux mount, WSL, a container —
+reports **every tracked file as modified** when nothing has changed. Diff such a tree
+with `--ignore-cr-at-eol` before believing it, and preserve CRLF when writing files.
+Normalizing this properly means a `.gitattributes` plus a renormalize commit touching
+every file; don't do that while another machine has unpushed work.
+
+---
+
 ## Open items
 
 **1. Dead time is unmeasured.** 1.000 µs is arithmetic, not a measurement. The correct
@@ -169,7 +181,11 @@ Toolchain used: `arm-none-eabi-gcc` from `I:\ST\STM32CubeCLT_1.21.0`.
 
 ---
 
-## Working preferences (Claude's memory doesn't sync between machines)
+## Working preferences
+
+Claude's account-level memory now follows the user across machines and surfaces, so
+these no longer need restating each session — but they are kept here because the repo
+is the authoritative copy and a session may be running without memory.
 
 - **Don't compile unless explicitly asked.** Write the code and stop; the build is
   driven from CubeIDE.
