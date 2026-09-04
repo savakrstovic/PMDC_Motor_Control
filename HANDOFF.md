@@ -116,13 +116,19 @@ already assumed (at the old ARR a full-scale command produced only 13% duty).
 
 ## Line endings
 
-The working tree is CRLF; the index stores LF; there is no `.gitattributes`. Git for
-Windows' default `core.autocrlf=true` makes this invisible on a Windows checkout, but
-any tool reading the folder with `autocrlf` unset — a Linux mount, WSL, a container —
-reports **every tracked file as modified** when nothing has changed. Diff such a tree
-with `--ignore-cr-at-eol` before believing it, and preserve CRLF when writing files.
-Normalizing this properly means a `.gitattributes` plus a renormalize commit touching
-every file; don't do that while another machine has unpushed work.
+`.gitattributes` (added in `60b34c6`) sets `* text=auto` plus explicit per-extension
+rules, so git stores LF and each working copy gets its own platform's endings — CRLF
+on Windows, LF elsewhere. This no longer depends on a per-machine `core.autocrlf`
+being set correctly, which is what previously made a Linux mount, WSL or a container
+report **every tracked file as modified** when nothing had changed. The repo was
+already LF-normalised when `.gitattributes` was added, so it needed no renormalise
+commit and changed no file content.
+
+**Still true for anything that edits files in this tree:** the Windows working tree
+is CRLF. A script string-replacing against `\n` matches single-line patterns and
+silently misses multi-line ones — exactly how `9d1c70a` applied two of its four edits
+while its message claimed all four. Read with universal newlines, write back as CRLF,
+and assert that every pattern matched exactly once.
 
 ---
 
@@ -188,23 +194,41 @@ option was set anywhere (CubeIDE supplies `-Wall` by default, `-Wextra` it does 
 So the zero-warning result was obtained under flags the repo did not capture. Treat
 "zero warnings" as unverified at `-Wextra` until someone rebuilds with it.
 
-## Build settings (`.cproject` is no longer tracked)
+## Build settings — `.cproject` and `.project` ARE tracked
 
-Eclipse/CubeIDE metadata — `.cproject`, `.project`, `.settings/` — is per-machine and
-is now ignored. Opening `M4-4205D_Control.ioc` in STM32CubeIDE regenerates all three.
+**Do not untrack them.** `c77b6ae` did, reasoning that IDE metadata is per-machine
+and regenerable. Both halves were wrong and it broke a working checkout; `5238378`
+and `df72a7b` restored both files byte-identical.
+
+- `git rm --cached` leaves the file on the machine where it ran, so *that* tree looks
+  fine while **every other checkout deletes it on pull**. Confirming "still on disk"
+  locally proves nothing about the other machines.
+- **`.cproject` is not regenerable in place.** It carries the whole CDT managed-build
+  configuration; without it Build and Clean grey out, because the folder is no longer
+  a build project. `.project` is what makes Eclipse recognise the folder as a project
+  at all. CubeIDE writes both only when *creating or importing* a project, never into
+  an already-broken folder — so "reopen the .ioc" is not a recovery path.
+
+Recovery if it recurs: `git checkout <commit-before-removal>^ -- .project .cproject`,
+or copy from a clone that has not yet pulled the removal.
+
+`.settings/` *is* disposable — CubeIDE regenerates it, and it stays ignored.
 `M4-4205D_Control.ioc` and `.mxproject` stay tracked: the first *is* the MCU
-configuration, and CubeMX needs the second to know what it previously generated.
+configuration, the second is what CubeMX needs to know what it last generated.
 
-What regeneration does **not** restore — set these by hand after a fresh clone:
+Because `.cproject` is tracked, these travel with the repo instead of needing to be
+set by hand after a clone:
 
 | Setting | Debug | Release |
 |---|---|---|
 | Optimization | `-Os` | `-Os` |
 | Debug level | `-g3` | `-g0` |
 
-`-Os` on the Debug configuration is a deliberate departure from CubeIDE's default and
-is easy to lose silently. Optimization level changes code timing, so a loop tuned at
-one level is not guaranteed at another.
+`-Os` on the Debug configuration is a deliberate departure from CubeIDE's default.
+Optimization level changes code timing, so a loop tuned at one level is not
+guaranteed at another. `.cproject` is also now the file where CubeIDE version
+differences between machines will surface as churn — watch for it appearing in diffs
+nobody caused.
 
 ---
 
@@ -233,6 +257,11 @@ against the wrong directory and a prompt like "continue work on X" will be read 
 git clone https://github.com/savakrstovic/PMDC_Motor_Control.git
 ```
 
+If instead you connect the actual working copy to the session, use that and skip the
+clone — it is the only view that shows unpushed commits and uncommitted changes. A
+clone and the project's GitHub sync both show `main` as last pushed, and will look
+clean while local work is pending.
+
 Then paste this. It verifies before it touches anything, so a wrong folder produces a
 question rather than a new project:
 
@@ -258,5 +287,5 @@ Then say what you actually want, e.g.:
 
 - "I've done the first bench test, here's what happened: ..."
 - "Help me tune the PI gains — here's a step response I captured."
-- "Fix open item #6, the stale comment in motor_cli.c."
+- "Land the current-limited output clamp from PROTECTION.md §3."
 - "Walk me through what to check on the scope before I apply bus voltage."
