@@ -17,6 +17,7 @@
 /Release/
 # STM32CubeIDE/.metadata/
 RemoteSystemsTempFiles/
+/.settings/
 
 # --- STM32CubeIDE / Eclipse metadata ---
 # Only /.settings/ is per-machine and disposable -- CubeIDE regenerates it.
