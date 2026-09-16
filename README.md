@@ -1,5 +1,7 @@
 # PMDC Motor Speed Control (STM32G474)
 
+**Repository:** [github.com/savakrstovic/PMDC_Motor_Control](https://github.com/savakrstovic/PMDC_Motor_Control)
+
 Closed-loop speed control firmware for a **M4-4205D permanent-magnet DC motor**,
 running on an **STM32G474RE** (NUCLEO-G474RE, Cortex-M4 @ 170 MHz). Speed is
 sensed by a tachogenerator and regulated by a discrete MOSFET H-bridge under a
