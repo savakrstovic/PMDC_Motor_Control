@@ -1,7 +1,8 @@
 # Protection, braking and power-stage interface
 
 Written 2026-07-27. **Revised 2026-11-19** against the Callan M4-420X electrical
-specification (datasheet) and the user's answers about the target system. Companion to
+specification ([docs/M4-420X_electrical_specification.pdf](docs/M4-420X_electrical_specification.pdf))
+and the user's answers about the target system. Companion to
 [HANDOFF.md](HANDOFF.md), which covers the firmware architecture.
 
 **Nothing here has been tested on hardware.** Numbers marked "derived" are computed from
@@ -75,7 +76,7 @@ is the more hazardous setup, and it is the one being used for driver bring-up.
 ## 2. Motors
 
 The driver must run three motor types. Values are from the M4-420X electrical
-specification; the 4208 winding is not yet known, so all four are listed.
+specification (`docs/`); the 4208 winding is not yet known, so all four are listed.
 
 | Parameter | M4-4205D | M4-4209D | M4-4208 A / B / C / D |
 |---|---|---|---|
