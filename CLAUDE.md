@@ -19,8 +19,12 @@ of earlier sessions — the code has changed substantially between sessions befo
 
 Builds clean. **Never run on hardware.** PROTECTION.md §5 lists the firmware gaps that
 must close before anything is powered: the loop currently commands full reverse
-(plugging) on any setpoint error above 500 rpm, and no hardware fault line reaches the
-MCU yet.
+(plugging) on any setpoint error above 500 rpm, the stop/power-up state shorts the motor
+(>1000 A from speed with the datasheet's 0.052 Ω), no hardware fault line reaches the
+MCU yet, and there is no current loop — which these motors require.
+
+Target motors (PROTECTION.md §2): M4-4205D, M4-4209D (also as a pair on one bridge) and
+M4-4208 (winding TBD). Parameters must become per-motor profiles.
 
 ## How this project is worked
 
@@ -44,6 +48,6 @@ sign-magnitude drive. Serial CLI on LPUART1 (ST-LINK VCP) at **209700 8N1**:
 ## Analog frontend
 
 Bipolar tach signal conditioned to a VDDA/2-centred 0.21–3.09 V range, so the 12-bit
-ADC code is signed speed with direction included. The source uses 1.8 rpm/code;
-PROTECTION.md derives 1.696 from the 9.5 V/1000 rpm tacho and lists the change as
-pending.
+ADC code is signed speed with direction included. Tacho is 9 V/krpm (not the brief's
+9.5), giving 1.790 rpm/code; the source's 1.8 is close. The earlier proposed 1.696 is
+withdrawn.

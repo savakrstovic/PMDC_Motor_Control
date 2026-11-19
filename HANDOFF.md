@@ -153,7 +153,10 @@ reads plausible RPM → tiny setpoint at low bus voltage → verify sign/directi
 both *low-side* FETs are on and the motor is shorted — that's the state at power-up,
 at `set 0`, and when `SpeedControl_WatchdogTask()` trips `MotorDriver_Stop()`. A
 break-input fault instead clears MOE with OSSR disabled, releasing outputs to Hi-Z so
-the motor coasts. Both are defensible; just don't assume they're the same.
+the motor coasts. ~~Both are defensible.~~ **Superseded 2026-11-19:** with the
+datasheet's R = 0.052 Ω, shorting the motor from speed is >1000 A — the brake-at-zero
+state is *not* defensible, and stop/watchdog/power-up must go to Hi-Z. See PROTECTION.md
+§3 "The safe state is coast".
 
 **5. The watchdog is unrequested scope.** `SpeedControl_WatchdogTask()` was added
 because moving the loop onto the ADC introduced a new failure mode: a dead sampling
