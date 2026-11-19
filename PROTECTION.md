@@ -19,8 +19,11 @@ datasheet values; numbers marked "estimated" are not from any document.
   current sensor is now mandatory, not "later".
 - **Shorting the motor (both low-sides on) is not a safe stop** — it is >1000 A from
   speed. The safe state is outputs off (Hi-Z, coast).
-- **Tacho is 9 V/krpm**, not 9.5. The existing `TACH_RPM_PER_CODE = 1.8f` is
-  essentially right (1.790); the pending change to 1.696 was wrong and is withdrawn.
+- **Tacho is 9.5 V/krpm** — the catalogue's standard option (order code 9), confirmed
+  by the user. `TACH_RPM_PER_CODE` must change from 1.8 to **1.696**. (An intermediate
+  draft of this revision said 9 V/krpm; that was a misremembering, corrected.)
+- **Tacho polarity is defined by the manufacturer** (§2): positive motor current →
+  clockwise → positive tacho voltage.
 - **The driver must support three motor types**, one of them as a pair on one bridge —
   parameters move from compile-time constants to per-motor profiles (§2, §5).
 - **The 90 A "board limit" is not a board rating** — it is the measured worst-case
@@ -92,19 +95,72 @@ specification (`docs/`); the 4208 winding is not yet known, so all four are list
 | Rotor inertia JM (kg·m²) | 0.014 | 0.0241 | 0.0217 |
 | Static friction (Nm) | 0.54 | 0.95 | 0.81 |
 | Viscous damping (Nm/krpm) | 0.16 | 0.30 | 0.26 |
-| Tacho | 9 V/krpm (custom) | 9 V/krpm (assumed) | 9 V/krpm (assumed) |
+| Tacho | 9.5 V/krpm | 9.5 V/krpm (assumed) | 9.5 V/krpm (assumed) |
 
 Notes:
 
-- **Tacho 9 V/krpm** for the 4205D comes from a separate order document (custom
-  variant; the datasheet's standard TGF2030-147 options are 19/38/47/57 V/krpm). It is
-  *assumed* for the 4209D and 4208 until their order documents are checked. Tacho
-  inertia (0.64 kg·cm²) is negligible.
+- **Tacho 9.5 V/krpm** is confirmed for the 4205D and *assumed* for the 4209D and 4208
+  until their order codes are read (below). Tacho inertia (0.64 kg·cm²) is negligible.
 - **The 4205D in practice runs at ~2500 rpm or less**, never its 3200 rpm rating (user).
 - Ke and Kt are mutually consistent in SI (35.5 V/krpm = 0.339 V·s/rad), which is a good
   sign the table was transcribed correctly.
 - Datasheet typos not affecting these motors: 4209**A** inductance reads "308" (surely
   3.08 mH); 4207 inertia reads "0.186" (surely 0.0186).
+
+### Order code — read it off each nameplate
+
+From the Callan code table ([docs/Callan_M4-420X_MT40_replacements.pdf](docs/Callan_M4-420X_MT40_replacements.pdf),
+page 3), the part number is
+
+```
+M4-420 <length><winding> - <flange><shaft><brake><connection><feedback> - <special>
+e.g.  M4-4205D-21049-410
+```
+
+The **winding letter** and the **feedback digit** are the two fields the firmware
+needs:
+
+| Feedback digit | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 9 | Y |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Tacho V/krpm | none | 19 | 57 | 38 | 47 | 3 | 30 | 7 | **9.5** | special |
+
+Caution: a feedback digit of 1 means a **19 V/krpm** tacho — twice what the front end is
+sized for. The ADC would saturate near 1500 rpm and the speed loop would see a false low
+speed and drive harder. Check every motor's code before running it. Both generic outline
+drawings found with the project documents (`-00011-000`, `-21001-000`) happen to decode
+to feedback 1, so they are not evidence of what is fitted.
+
+### Connectors, polarity, thermostat
+
+- **Connectors on these motors are Amphenol MIL-DTL-38999 Series I, 21-48** — not the
+  MS3102E, cable-gland or terminal-box variants in Callan's outline drawings, so the
+  drawings' pin letters do not apply. The pin-to-function map (motor ±, tacho ±) has to
+  come from the order documents.
+- **Polarity convention** (every Callan drawing): positive current into the motor's
+  positive terminal turns the shaft **clockwise facing the mounting end**, and that
+  rotation produces a **positive** tacho voltage on its positive terminal. So: wire
+  motor + to the bridge leg driven by `TIM1_CH1` and tacho + to the front end's
+  positive input, and positive duty gives positive rpm. The firmware keeps a
+  configurable tacho sign anyway, as a guard against wiring errors.
+- **Each motor has an internal thermostat** (N.C., opens at 90 °C ± 6, recloses at
+  70 °C). It is the motor's own protection and **has no output to the driver**, so the
+  firmware has no motor-temperature signal: a per-motor I²t model is the only thermal
+  protection the drive can provide.
+
+### Commutation limit — estimated
+
+Callan publishes performance curves only for the M4-4202…4204, not these motors. Those
+curves show a **recommended commutation limit** — a constant-power hyperbola above which
+brush commutation is at risk — at roughly 1.6–1.9x the motor's rated power, with the
+band between rated power and that limit marked "Accel./Decel. only".
+
+By analogy only, the 4205D (2.24 kW rated) would have a commutation limit around
+3.5–4 kW. At 2500 rpm, 3.5 kW is ~13 Nm ≈ **40 A**. So the permissible current very
+likely **falls with speed**, and braking at 90–120 A from top speed would sit outside it
+even though it is within the peak-current rating. Until better data exists, the current
+limit is speed-dependent: `I_max(ω) = min(I_peak, P_comm / (Kt · ω))`, with `P_comm`
+set conservatively. Brush sparking on the bench at high speed and high current is the
+practical check.
 
 ### Twin 4209D on one bridge
 
@@ -241,7 +297,9 @@ With the current loop in place, stalling against the mechanical hard stop holds 
 current at `I_limit` instead of `V/R`. That is a **thermal** problem with seconds of
 margin (83 W in the 4205D winding at 40 A, below its 46 A continuous rating), not an
 instantaneous one. Stall detection becomes: speed below a threshold while `I_ref` sits at
-its limit for longer than a timeout → coast, plus an I²t estimate per motor.
+its limit for longer than a timeout → coast, plus an I²t estimate per motor. The motor's
+thermostat is internal with no output (§2), so I²t is the drive's only view of winding
+temperature.
 
 ---
 
@@ -269,8 +327,9 @@ confirmation**.
 
 `FO1`/`FO2` come from the board's fault flip-flop (U6), which latches on any of:
 DC-link overvoltage, DC-link undervoltage, DC-link overcurrent, motor overcurrent, and
-four temperature channels. The comparator protection this project needs **already exists
-in hardware** — it simply is not connected to the MCU.
+four temperature channels — these measure the **power transistors**, not the motor
+(user, 2026-11-19). The comparator protection this project needs **already exists in
+hardware** — it simply is not connected to the MCU.
 
 ### Current rating
 
@@ -321,7 +380,7 @@ or route `FLT_CLR` to a connector in the redesign.
 |---|---|
 | **Safe state = coast** | `MotorDriver_Stop()`, the watchdog trip and power-up currently short the motor (both low-sides on) — >1000 A from speed. Make all of them clear MOE (Hi-Z); start with outputs disabled until explicitly enabled. |
 | **`GPIO_PULLUP` on PA6** | break input is currently **floating** on an active-low break. Also set `BreakFilter` to ~4–8. (CubeMX GUI) |
-| **Tacho sign, configurable** | sign convention between duty and tacho is undocumented. If it is inverted, the speed loop is positive feedback and runs away. Make it a per-motor setting and verify open-loop on the bench. |
+| **Tacho sign, configurable** | the manufacturer defines the convention (§2), but a swapped motor or tacho pair inverts it, and an inverted sign makes the speed loop positive feedback — it runs away. Per-motor setting, verified open-loop on the bench. |
 | **Open-loop bench command** | a CLI command for a small fixed duty, so tacho sign and direction can be checked before the loop is closed. At standstill 1% duty on a 115 V bus is ~22 A in a 4205D — only at low bus voltage, from a current-limited supply. |
 | `DeadTime` → `203` | 2.024 µs, matching the ~2 µs measured on this driver with a previous MCU. Current value 149 (1 µs). (CubeMX GUI) |
 
@@ -334,10 +393,11 @@ or route `FLT_CLR` to a connector in the redesign.
 | **Speed PI outputs current** | §3. Removes plugging structurally. Current `SPEED_KP = 2.0f` saturates to full reverse duty for any error above 500 rpm. |
 | **Per-motor profiles** | Ke, R, L, I_limit (continuous and peak), tacho constant and sign, max rpm, current-loop gains. A `MotorProfile` struct selected at runtime. 4205D, 4209D, twin 4209D, 4208 (winding TBD). |
 | **Motor selection that can't silently be wrong** | jumper/DIP, ID resistor, or CLI + flash. Wrong profile = wrong current limit and gains. Undecided. |
-| **Stall detection** | speed < threshold while `I_ref` is at its limit for > timeout → coast; plus I²t per motor (§3). |
+| **Stall detection + I²t** | speed < threshold while `I_ref` is at its limit for > timeout → coast; plus I²t per motor (§3) — the only motor thermal protection the drive has. |
+| **Speed-dependent current limit** | commutation limit, estimated (§2): `I_max(ω) = min(I_peak, P_comm / (Kt·ω))`. |
 | **End-of-movement switch input** | the stop source in the field (platform can't be changed). Pin, NO/NC and debounce undecided; it should command the stop directly in firmware, not via the CLI. |
 | **Duty cap below 100%** | if the SI8273 high sides are bootstrap-supplied, 100% duty can't be held. Matters most for the 4205D, which needs nearly the full bus. |
-| `TACH_RPM_PER_CODE` → `1.790f` | 9 V/krpm × 0.05 attenuation ÷ 0.8057 mV/code. Current `1.8f` is 0.56% high — minor. (The earlier proposed `1.696f` assumed 9.5 V/krpm and is **withdrawn**.) The front end fits ±28.8 V = 3200 rpm at 9 V/krpm, so all three motors fit. |
+| `TACH_RPM_PER_CODE` → `1.696f` | 9.5 V/krpm × 0.05 attenuation ÷ 0.8057 mV/code. Current `1.8f` reads 6.1% high, so the loop settles ~6% below every setpoint. The front end fits ±28.8 V = **±3030 rpm** at 9.5 V/krpm — enough for all three motors at their practical speeds, but a 19 V/krpm tacho would not fit (§2). |
 | ~~CLI setpoint limit → ±3200~~ | **done 2026-09-03**. Should become per-motor max rpm (4205D ~2500 in practice). |
 
 ### Deliberate divergences from the design brief
@@ -361,9 +421,10 @@ or route `FLT_CLR` to a connector in the redesign.
 
 | Item | Status / how | Why it matters |
 |---|---|---|
-| **4208 winding** (A/B/C/D) | user to find in documents / nameplate | R, L, Ke, current limits differ up to 10x |
-| **Tacho constant for 4209D and 4208** | assumed 9 V/krpm; check order documents | wrong value = wrong speed, possible ADC saturation |
-| **Tacho sign vs drive direction** | possibly in documentation; otherwise verify open-loop on the bench | inverted sign = runaway |
+| **Full order code of every motor** | user, from nameplates / order documents | gives the 4208 winding (R, L, Ke, limits differ up to 10x) and each tacho (a 19 V/krpm unit would saturate the ADC) — §2 |
+| **38999 21-48 connector pinout** | order documents | which pins are motor ± and tacho ± |
+| Tacho sign vs drive direction | defined by the manufacturer (§2); verify open-loop on the bench | inverted sign = runaway |
+| Commutation limit of these motors | no published curves; estimated by analogy (§2) | high-speed current limit |
 | **Twin 4209D: which tacho feeds the loop?** | one tach ADC channel today | the other motor's speed is unobserved |
 | **Board overcurrent trip threshold** | rev 1.2 schematic, then redesign | sets the real ceiling for `I_limit` |
 | **Brake chopper: hardware or MCU-driven?** | redesign schematic | pin allocation, need for `SENSE_V_DC` |
@@ -374,7 +435,7 @@ or route `FLT_CLR` to a connector in the redesign.
 | `FO` polarity / drive | schematic or meter | sets break polarity in firmware |
 | PA6 5 V tolerance | G474 datasheet pin table | whether `FO` can be wired directly |
 | Dead time at the gates | scope V_GS at the FET pins, both devices of one leg | confirms 2 µs is adequate at Rg = 10 Ω |
-| Tacho constant, actual | spin shaft by drill, bridge unpowered: `K_tach = 35.5 × V_tach / V_motor` (4205D) | calibrates the whole tach front end against the datasheet Ke |
+| Tacho front end, actual | spin shaft by drill, bridge unpowered: `K_tach = 35.5 × V_tach / V_motor` (4205D), then compare the ADC reading | checks the 9.5 V/krpm figure and the 0.05 attenuation in one go |
 
 Ke and R no longer need measuring for the design — the datasheet gives them. A quick
 four-wire R check is still worthwhile to catch cabling and connector resistance, which at

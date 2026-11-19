@@ -48,6 +48,6 @@ sign-magnitude drive. Serial CLI on LPUART1 (ST-LINK VCP) at **209700 8N1**:
 ## Analog frontend
 
 Bipolar tach signal conditioned to a VDDA/2-centred 0.21–3.09 V range, so the 12-bit
-ADC code is signed speed with direction included. Tacho is 9 V/krpm (not the brief's
-9.5), giving 1.790 rpm/code; the source's 1.8 is close. The earlier proposed 1.696 is
-withdrawn.
+ADC code is signed speed with direction included. Tacho is 9.5 V/krpm (Callan order
+code 9), giving 1.696 rpm/code; the source still uses 1.8 (pending change, PROTECTION.md
+§5). Front end range is ±3030 rpm at that tacho constant.
